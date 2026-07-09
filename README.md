@@ -1,313 +1,405 @@
 # AI-First CRM HCP Interaction Logger
 
-This project is an AI-first Customer Relationship Management module for Healthcare Professional interaction logging. It uses a split-screen interface where the left side shows a read-only HCP interaction form and the right side provides an AI assistant chat. The user does not manually fill the form; the AI assistant controls the form through natural language prompts.
+An AI-first Customer Relationship Management (CRM) module for Healthcare Professional (HCP) interaction logging. The application provides a split-screen interface where the left panel displays a **read-only interaction form**, while the right panel contains an AI assistant chat. Users never fill the form manually—instead, the AI assistant interprets natural language prompts, selects the appropriate LangGraph tool, and automatically updates the form.
 
-## Task Understanding
+---
 
-The goal was to build a technical prototype of a life-sciences CRM screen for field representatives. A representative can describe an HCP meeting, correction, follow-up request, or compliance concern in natural language. The AI assistant interprets the message, calls LangGraph tools, and returns structured form updates to the React frontend.
+# Project Overview
 
-The application demonstrates:
+This project is a prototype of an AI-powered CRM system designed for pharmaceutical and life sciences field representatives.
 
-- AI-controlled form population
-- Natural-language field editing
-- Compliance review for regulated HCP interactions
+Instead of manually entering visit details after meeting a Healthcare Professional (HCP), representatives can simply describe the interaction in natural language. The AI assistant extracts structured information, updates the CRM form, performs compliance checks, suggests follow-up actions, and generates CRM-ready summaries.
+
+The project demonstrates an AI-first workflow where LangGraph acts as the orchestration layer between the user, the LLM, and business tools.
+
+---
+
+# Features
+
+- AI-controlled interaction form
+- Natural language interaction logging
+- AI-based field editing
+- Automatic CRM summary generation
+- Compliance validation for HCP interactions
 - Follow-up recommendation
-- CRM-ready note summarization
-- Database save flow
+- Database persistence
+- Read-only form controlled entirely through AI
+- Split-screen CRM interface
 
-## Tech Stack
+---
 
-- Frontend: React, TypeScript, Redux Toolkit, Vite
-- Backend: Python, FastAPI
-- AI Framework: LangGraph
-- LLM Provider: Groq through LangChain `ChatGroq`
-- Active Groq Model: `llama-3.3-70b-versatile`
-- Requested Model Note: `gemma2-9b-it` was requested in the assignment, but Groq returned a decommissioned-model error. The model is configurable with `GROQ_MODEL`.
-- Database: SQLAlchemy with SQLite for local demo, compatible with Postgres/MySQL through `DATABASE_URL`
-- Font: Google Inter
+# Tech Stack
 
-## Project Structure
+### Frontend
+
+- React
+- TypeScript
+- Redux Toolkit
+- Vite
+- Google Inter Font
+
+### Backend
+
+- Python
+- FastAPI
+- SQLAlchemy
+
+### AI
+
+- LangGraph
+- LangChain
+- Groq LLM
+
+### LLM
+
+Active Model:
+
+```
+llama-3.3-70b-versatile
+```
+
+**Model Note**
+
+The assignment specified the Groq model **gemma2-9b-it**. During development, this model had been deprecated on Groq and returned a decommissioned-model error. Therefore, **llama-3.3-70b-versatile** was used as a compatible replacement. The model can be changed at any time through the `GROQ_MODEL` environment variable without modifying the application code.
+
+### Database
+
+The application uses **SQLAlchemy with SQLite** for local demonstration.
+
+The project is fully compatible with **PostgreSQL** or **MySQL** by simply changing the `DATABASE_URL` environment variable.
+
+---
+
+# System Architecture
+
+```text
+                   React + Redux
+                         │
+               POST /api/chat
+                         │
+                     FastAPI
+                         │
+                    LangGraph
+                         │
+      ┌────────────┬─────────────┬─────────────┐
+      │            │             │             │
+ Log Tool     Edit Tool   Compliance Tool   Summary Tool
+      │            │             │             │
+      └────────────┴─────────────┴─────────────┘
+                         │
+                     Groq LLM
+                         │
+                    SQLAlchemy
+                         │
+                      SQLite
+```
+
+---
+
+# Project Structure
 
 ```text
 hcp-crm-ai/
-  backend/
-    app/
-      agent/
-        graph.py
-        tools.py
-      services/
-        interaction_service.py
-      database.py
-      main.py
-      models.py
-      schemas.py
-    requirements.txt
-    .env.example
-  frontend/
-    src/
-      app/
-        hooks.ts
-        store.ts
-      components/
-        AIAssistantPanel.tsx
-        InteractionForm.tsx
-      features/
-        chat/
-          chatSlice.ts
-        interaction/
-          interactionSlice.ts
-      App.tsx
-      main.tsx
-      styles.css
-    package.json
+
+├── backend/
+│   ├── app/
+│   │   ├── agent/
+│   │   │   ├── graph.py
+│   │   │   └── tools.py
+│   │   ├── services/
+│   │   │   └── interaction_service.py
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   └── schemas.py
+│   ├── requirements.txt
+│   └── .env.example
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── features/
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── styles.css
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── README.md
+└── .gitignore
 ```
 
-## How The App Works
+---
+
+# How the Application Works
 
 ```text
-User writes message in chat
-  -> React sends message and current form state to FastAPI
-  -> FastAPI calls the LangGraph agent
-  -> Groq LLM decides which tool to call
-  -> Tool returns a structured form_patch
-  -> Redux applies the patch
-  -> Left-side CRM form updates automatically
+User enters a natural language prompt
+            │
+            ▼
+React sends the prompt to FastAPI
+            │
+            ▼
+FastAPI invokes the LangGraph agent
+            │
+            ▼
+Groq LLM determines the user's intent
+            │
+            ▼
+LangGraph selects the appropriate tool
+            │
+            ▼
+The selected tool returns a structured form patch
+            │
+            ▼
+Redux updates the application state
+            │
+            ▼
+The read-only CRM form updates automatically
 ```
 
-## LangGraph Tools
+---
 
-The project implements five LangGraph tools in `backend/app/agent/tools.py`.
+# LangGraph Tools
 
-### 1. Log Interaction Tool
+The project implements five LangGraph tools located in:
 
-Purpose: Extracts HCP interaction details from a natural-language note and fills the form.
+```
+backend/app/agent/tools.py
+```
 
-Example prompt:
+---
+
+## 1. Log Interaction Tool
+
+### Purpose
+
+Extracts HCP interaction details from natural language and automatically fills the interaction form.
+
+### Example Prompt
 
 ```text
-I met Dr. Priya Menon yesterday at Fortis. She is an endocrinologist. We discussed GlucoFree. She was positive and asked for adherence data.
+I met Dr. Priya Menon yesterday at Fortis Hospital. She is an endocrinologist. We discussed GlucoFree. She was positive and requested adherence data.
 ```
 
-Expected behavior:
+### Expected Output
 
-- Fills HCP name
-- Fills specialty
-- Fills institution
-- Fills product discussed
-- Sets sentiment
-- Adds key topics
-- Adds follow-up requirement
+- HCP Name
+- Specialty
+- Institution
+- Product
+- Sentiment
+- Key Topics
+- Follow-up Required
 
-### 2. Edit Interaction Tool
+---
 
-Purpose: Updates specific fields when the AI-filled form has a mistake.
+## 2. Edit Interaction Tool
 
-Example prompt:
+### Purpose
+
+Updates existing interaction details using natural language without manually editing the form.
+
+### Example Prompt
 
 ```text
 Change the sentiment to Neutral and set the interaction type to in-person visit.
 ```
 
-Expected behavior:
+### Expected Output
 
-- Updates sentiment
-- Updates interaction type
-- Does not require manual form editing
+Only the requested fields are updated while preserving all other information.
 
-### 3. Validate Compliance Tool
+---
 
-Purpose: Checks interaction notes for common regulated life-sciences risks.
+## 3. Validate Compliance Tool
 
-Example prompt:
+### Purpose
 
-```text
-Check this note for compliance: I promised the doctor guaranteed patient improvement and offered a gift if they prescribe GlucoFree.
-```
+Reviews interaction notes for potential compliance concerns commonly found in regulated life sciences interactions.
 
-Expected behavior:
-
-- Flags possible guarantee or overstatement
-- Flags possible gift or inducement concern
-- Updates compliance flags
-
-### 4. Suggest Follow-up Tool
-
-Purpose: Recommends next steps based on sentiment, key topics, and requested materials.
-
-Example prompt:
+### Example Prompt
 
 ```text
-The doctor was interested and asked me to send approved adherence data next week.
+Check this interaction for compliance:
+I promised guaranteed patient improvement and offered a gift if the doctor prescribed GlucoFree.
 ```
 
-Expected behavior:
+### Expected Output
 
-- Sets follow-up required to true
-- Suggests sending approved material
-- Keeps the interaction in Draft until saved
+- Compliance warnings
+- Flagged risk statements
+- Compliance status update
 
-### 5. Summarize Interaction Tool
+---
 
-Purpose: Converts rough representative notes into a cleaner CRM-ready summary.
+## 4. Suggest Follow-up Tool
 
-Example prompt:
+### Purpose
+
+Recommends the next best action based on the interaction.
+
+### Example Prompt
 
 ```text
-Make this CRM-ready: met doctor today discussed GlucoFree she liked data but wants more adherence info no samples given.
+The doctor requested approved adherence data next week.
 ```
 
-Expected behavior:
+### Expected Output
 
-- Updates discussion summary
-- Produces a concise CRM-style note
+- Follow-up required
+- Suggested next action
+- Reminder recommendation
 
-## Backend Setup
+---
+
+## 5. Summarize Interaction Tool
+
+### Purpose
+
+Converts rough meeting notes into professional CRM-ready documentation.
+
+### Example Prompt
+
+```text
+Make this CRM-ready:
+met doctor today discussed GlucoFree she liked data but requested more adherence information no samples provided
+```
+
+### Expected Output
+
+A concise and professional CRM summary.
+
+---
+
+# Backend Setup
 
 ```powershell
-cd D:\projects\hcp-crm-ai\backend
+cd backend
+
 python -m venv ..\.venv
-..\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+
+..\ .venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
 ```
 
-Create `backend/.env`:
+Create a file named:
+
+```
+backend/.env
+```
+
+Example:
 
 ```env
-GROQ_API_KEY=your_groq_api_key_here
+GROQ_API_KEY=your_groq_api_key
+
 GROQ_MODEL=llama-3.3-70b-versatile
+
 DATABASE_URL=sqlite:///./hcp_crm.db
 ```
 
-Run backend:
+Run the backend:
 
 ```powershell
 python -m uvicorn app.main:app --reload
 ```
 
-Backend URLs:
+Backend URLs
 
-```text
+```
 http://127.0.0.1:8000/api/health
+
 http://127.0.0.1:8000/docs
 ```
 
-## Frontend Setup
+---
+
+# Frontend Setup
 
 ```powershell
-cd D:\projects\hcp-crm-ai\frontend
+cd frontend
+
 npm install
+
 npm run dev
 ```
 
-Frontend URL:
+Frontend URL
 
-```text
+```
 http://localhost:5173
 ```
 
-## Demo Flow
+---
 
-1. Open the frontend.
-2. Show the left read-only interaction form.
-3. Show the right AI assistant panel.
-4. Enter the log interaction prompt.
-5. Show the form automatically filling.
-6. Enter the edit interaction prompt.
-7. Show the fields changing without manual form input.
-8. Enter the compliance prompt.
-9. Show compliance flags.
-10. Enter the follow-up prompt.
-11. Show follow-up fields.
-12. Enter the summarization prompt.
-13. Show discussion summary update.
-14. Click Save Interaction.
-15. Show saved interaction ID.
+# Demo Flow
 
-## Video Walkthrough Script
+1. Launch the frontend.
+2. Show the split-screen interface.
+3. Explain that the interaction form is read-only.
+4. Demonstrate Log Interaction.
+5. Demonstrate Edit Interaction.
+6. Demonstrate Compliance Validation.
+7. Demonstrate Follow-up Recommendation.
+8. Demonstrate CRM Summary Generation.
+9. Click **Save Interaction**.
+10. Show the generated interaction ID.
 
-Recommended length: 10 to 15 minutes.
+---
 
-### 1. Introduction
+# Code Walkthrough
 
-Explain that this is an AI-first HCP CRM interaction logger for life-sciences field representatives. The key idea is that the form is controlled through chat, not manual typing.
+### Backend
 
-### 2. Frontend Walkthrough
+- `app/main.py` – FastAPI application and REST APIs
+- `agent/graph.py` – LangGraph workflow
+- `agent/tools.py` – LangGraph tools
+- `database.py` – SQLAlchemy database configuration
+- `models.py` – Database models
+- `schemas.py` – Request and response schemas
+- `services/interaction_service.py` – Business logic
 
-Show the split-screen UI:
+### Frontend
 
-- Left panel: interaction details form
-- Right panel: AI assistant chat
-- Form fields are disabled/read-only
-- Save button appears after the form is populated
+- `InteractionForm.tsx` – Read-only CRM form
+- `AIAssistantPanel.tsx` – AI chat interface
+- `interactionSlice.ts` – Redux interaction state
+- `chatSlice.ts` – Chat state management
+- `store.ts` – Redux store
 
-### 3. Tool Demo
+---
 
-Run these prompts one by one:
+# Future Enhancements
 
-```text
-I met Dr. Priya Menon yesterday at Fortis. She is an endocrinologist. We discussed GlucoFree. She was positive and asked for adherence data.
-```
+- Authentication and role-based access
+- PostgreSQL production deployment
+- MySQL production deployment
+- Multi-user CRM support
+- Calendar integration
+- Email reminders
+- Doctor interaction history
+- File attachments
+- Dashboard and analytics
+- Voice-based interaction logging
 
-```text
-Change the sentiment to Neutral and set the interaction type to in-person visit.
-```
+---
 
-```text
-Check this note for compliance: I promised the doctor guaranteed patient improvement and offered a gift if they prescribe GlucoFree.
-```
+# Assignment Summary
 
-```text
-The doctor was interested and asked me to send approved adherence data next week.
-```
+This project demonstrates an AI-first CRM workflow for Healthcare Professional interaction logging.
 
-```text
-Make this CRM-ready: met doctor today discussed GlucoFree she liked data but wants more adherence info no samples given.
-```
+The application satisfies the assignment requirements by implementing:
 
-Explain which LangGraph tool is being demonstrated after each prompt.
-
-### 4. Code Explanation
-
-Briefly show:
-
-- `backend/app/agent/tools.py` for the five tools
-- `backend/app/agent/graph.py` for LangGraph orchestration
-- `backend/app/main.py` for FastAPI endpoints
-- `frontend/src/features/interaction/interactionSlice.ts` for Redux form state
-- `frontend/src/features/chat/chatSlice.ts` for chat API calls
-- `frontend/src/components/InteractionForm.tsx` for the read-only form
-- `frontend/src/components/AIAssistantPanel.tsx` for the chat panel
-
-### 5. Database Save
-
-Click Save Interaction and explain that the saved record goes through FastAPI and SQLAlchemy into the local database.
-
-### 6. Summary
-
-Summarize that the project satisfies the requirement by using React, Redux, FastAPI, LangGraph, Groq LLM, SQLAlchemy database persistence, and five AI tools.
-
-## GitHub Deployment Steps
-
-```powershell
-cd D:\projects\hcp-crm-ai
-git init
-git add .
-git commit -m "Build AI-first HCP CRM interaction logger"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/hcp-crm-ai.git
-git push -u origin main
-```
-
-Do not commit `.env`. Add this to `.gitignore`:
-
-```text
-backend/.env
-backend/hcp_crm.db
-backend/__pycache__/
-backend/app/__pycache__/
-backend/app/agent/__pycache__/
-backend/app/services/__pycache__/
-frontend/node_modules/
-frontend/dist/
-```
-
+- React frontend
+- Redux state management
+- FastAPI backend
+- LangGraph agent orchestration
+- Groq LLM integration
+- Five LangGraph tools
+- Automatic AI-controlled form population
+- Database persistence
+- Natural language interaction editing
+- Split-screen CRM interface
